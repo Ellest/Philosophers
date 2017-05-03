@@ -60,8 +60,10 @@ int main(int argc, char* argv[])
     }
     string fileName;
     istringstream iss(argv[1]);
+    // open file to initialize with input
     if (iss >> fileName){
         ifstream myFile(fileName);
+        // grabbing input data
         if (myFile.is_open()){
             int whichLine = 0;
             string firstLine;
@@ -116,8 +118,10 @@ int main(int argc, char* argv[])
         semStat[i].resize(rowVec[i].size());
     }
     int bottleCount;
+    // initializing bottles
     for (int i = 0; i < rowVec.size(); i++){
         for (int j = i; j < rowVec[i].size(); j++){
+            // if bottle exists, initialize a handle and mark availability
             if (rowVec[i][j] == 1){
                 bottleCount++;
                 sem_init(&S[i][j], 0, 1);
@@ -138,13 +142,16 @@ int main(int argc, char* argv[])
     int i,j;
     pthread_t thread_id[N];
     
+    // initialize mutex
     sem_init(&mutexx,0,1);
     
     for(i=0;i<N;i++)
     {
+        // create threads for each process. Handling concurrency with mutexes
         pthread_create(&thread_id[i],NULL,philospher,&phil_num[i]);
     }
     for(i=0;i<N;i++)
+        // merging threads
         pthread_join(thread_id[i],NULL);
     return Success;
 }
@@ -158,6 +165,7 @@ void *philospher(void *num)
         usleep(sec);
         take_bottle(*i);
         speak(*i);
+        // timeout
         usleep(0);
         put_bottle(*i);
         // don't change
@@ -172,13 +180,15 @@ void *philospher(void *num)
         }
     }
 }
-
+/* Method for printing current overall status */
 void speak(int who)
 {
+    // wait for handle to become available
     sem_wait(&mutexx);
     stringstream printS;
     printS << "Philosopher " << who << " is drinking from Bottles: ";
     string printString = printS.str();
+    // interate over bottle list to see who's drinking from each bottle
     for (tuple<int,int> t : whichBottle[who]){
         int x = get<0>(t);
         int y = get<1>(t);
@@ -190,12 +200,16 @@ void speak(int who)
     cout << printString << endl<<endl;
     printS.flush();
     usleep(sec);
+    // release handle
     sem_post(&mutexx);
 }
-  
+
+/* Method to handle asking for bottles */
 void take_bottle(int sem)
 {
+    // wait for handle to become available
     sem_wait(&mutexx);
+    // updating status
     state[sem] = THIRSTY;
     pickedUp[sem] = false;
     int semCount = 0;
@@ -210,6 +224,7 @@ void take_bottle(int sem)
             first = sem;
             second = i;
         }
+        // if bottle is available
         if (semStat[first][second]){
             semCount++;
         }
@@ -227,34 +242,43 @@ void take_bottle(int sem)
             first = sem;
             second = i;
         }
+        // if bottle is available
         if (semStat[first][second]){
             if (sem_trywait(&S[first][second]) == 0){
                 if (semPassed == (semCount - 1)){
                     tuple<int,int> bottleIs = make_tuple(first, second);
+                    // add to bottles currently picked up
                     whichBottle[sem].push_back(bottleIs);
+                    // update status
                     pickedUp[sem] = true;
                     drinkCount[sem]++;
                 }
                 int randNum = rand() % 10;
                 if (randNum <= 5){
+                    // update semaphore
                     sem_post(&S[first][second]);
                     semPassed++;
                 }
                 else{
                     tuple<int,int> bottleIs = make_tuple(first, second);
                     whichBottle[sem].push_back(bottleIs);
+                    // increment drink count
                     drinkCount[sem]++;
                 }
             }
         }
     }
+    // release handle
     sem_post(&mutexx);
+    // timeout
     usleep(sec);
 }
   
 void put_bottle(int ph_num)
 {
+    // wait for handle
     sem_wait(&mutexx);
+    // update status
     state[ph_num] = THINKING;
     stringstream printS;
     printS << "Philosopher " << ph_num << " is putting down Bottles: ";
@@ -262,6 +286,7 @@ void put_bottle(int ph_num)
     for (tuple<int,int> t : whichBottle[ph_num]){
         int x = get<0>(t);
         int y = get<1>(t);
+        // release semaphore for bottles
         sem_post(&S[x][y]);
         stringstream temp;
         temp << "(" << x << " , " << y << ")";
@@ -271,5 +296,6 @@ void put_bottle(int ph_num)
     whichBottle[ph_num].clear();
     cout << printString << endl<<endl;
     printS.flush();
+    // release handle
     sem_post(&mutexx);
 }
