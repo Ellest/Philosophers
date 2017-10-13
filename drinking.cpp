@@ -1,13 +1,3 @@
-/*
-    WUSTL - FL2014 - CSE 422S - Lab 2
-    Part 2 - Drinking Philosopher
-
-    Name: SeungJu Lee and Elliot Yun
-    yune@wustl.edu
-    seungjulee@wustl.edu
-
-    Lab 2
- */
 #include <stdio.h>
 #include <semaphore.h>
 #include <unistd.h>
